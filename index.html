@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>水土保持计算工具箱</title>
+<style>
+:root{
+  --primary:#2E7D32;--primary-dark:#1B5E20;--primary-light:#E8F5E9;
+  --bg:#F5F7F5;--card:#FFFFFF;--text:#1F2937;--text-sec:#6B7280;
+  --border:#E5E7EB;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.6;
+}
+header{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff;padding:26px 20px;text-align:center;
+}
+header h1{font-size:23px;font-weight:700;margin-bottom:6px}
+header p{font-size:13px;opacity:.92}
+.tabs{display:flex;justify-content:center;gap:8px;padding:16px 20px 0;flex-wrap:wrap}
+.tab{
+  padding:9px 18px;border:1px solid var(--border);background:var(--card);
+  border-radius:8px;cursor:pointer;font-size:14px;transition:.2s;
+}
+.tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.wrap{max-width:920px;margin:0 auto;padding:20px}
+.panel{display:none}
+.panel.active{display:block}
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:22px;
+}
+.card h2{font-size:17px;color:var(--primary-dark);margin-bottom:4px}
+.desc{font-size:13px;color:var(--text-sec);margin-bottom:16px}
+.formula{
+  background:var(--primary-light);border-left:3px solid var(--primary);
+  padding:10px 14px;border-radius:4px;font-size:13px;margin-bottom:18px;
+}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.lb{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.lb span:first-child{font-size:13px}
+.unit{font-size:11px;color:var(--text-sec)}
+input{
+  width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;
+  font-size:14px;background:#fff;
+}
+input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(46,125,50,.12)}
+.btn{
+  margin-top:18px;padding:11px 26px;background:var(--primary);color:#fff;
+  border:none;border-radius:8px;font-size:15px;cursor:pointer;transition:.2s;
+}
+.btn:hover{background:var(--primary-dark)}
+.btn-clear{
+  background:#fff;color:var(--text-sec);border:1px solid var(--border);
+  margin-left:8px;
+}
+.btn-clear:hover{background:#F3F4F6}
+.result{
+  margin-top:20px;padding:18px;background:var(--primary-light);
+  border-radius:8px;display:none;
+}
+.result.show{display:block}
+.rrow{
+  display:flex;justify-content:space-between;align-items:center;padding:8px 0;
+  border-bottom:1px dashed rgba(46,125,50,.22);font-size:14px;
+}
+.rrow:last-child{border-bottom:none}
+.rrow .k{color:var(--text-sec)}
+.rrow .v{font-weight:600;color:var(--primary-dark)}
+.big{font-size:23px;font-weight:700;color:var(--primary)}
+.badge{
+  display:inline-block;padding:3px 11px;border-radius:12px;
+  font-size:12px;font-weight:600;color:#fff;
+}
+.badge.ok{background:#2E7D32}
+.badge.no{background:#C62828}
+.badge.mid{background:#F57C00}
+.grade{
+  margin-top:14px;padding:13px;background:#fff;border-radius:6px;
+  font-size:14px;text-align:center;
+}
+.note{font-size:12px;color:var(--text-sec);margin-top:16px;line-height:1.8}
+footer{text-align:center;padding:22px 20px;font-size:12px;color:var(--text-sec)}
+@media(max-width:600px){
+  .grid{grid-template-columns:1fr}
+  header h1{font-size:19px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>水土保持计算工具箱</h1>
+  <p>依据 GB 50434《开发建设项目水土流失防治标准》与 SL 190《土壤侵蚀分类分级标准》</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-p="p1">土壤侵蚀量计算</div>
+  <div class="tab" data-p="p2">六项防治目标</div>
+  <div class="tab" data-p="p3">弃渣场估算</div>
+</div>
+
+<div class="wrap">
+
+  <!-- 工具一：RUSLE -->
+  <div class="panel active" id="p1">
+    <div class="card">
+      <h2>通用土壤流失方程（RUSLE）</h2>
+      <div class="desc">计算年均土壤流失量，并自动判定水力侵蚀强度等级。</div>
+      <div class="formula">A = R × K × L × S × C × P</div>
+      <div class="grid">
+        <div>
+          <div class="lb"><span>降雨侵蚀力因子 R</span><span class="unit">MJ·mm/(hm²·h·a)</span></div>
+          <input type="number" step="any" id="r1" placeholder="如 5000">
+        </div>
+        <div>
+          <div class="lb"><span>土壤可蚀性因子 K</span><span class="unit">t·hm²·h/(hm²·MJ·mm)</span></div>
+          <input type="number" step="any" id="r2" placeholder="如 0.30">
+        </div>
+        <div>
+          <div class="lb"><span>坡长因子 L</span><span class="unit">无量纲</span></div>
+          <input type="number" step="any" id="r3" placeholder="如 1.50">
+        </div>
+        <div>
+          <div class="lb"><span>坡度因子 S</span><span class="unit">无量纲</span></div>
+          <input type="number" step="any" id="r4" placeholder="如 2.00">
+        </div>
+        <div>
+          <div class="lb"><span>植被覆盖与管理因子 C</span><span class="unit">无量纲</span></div>
+          <input type="number" step="any" id="r5" placeholder="如 0.20">
+        </div>
+        <div>
+          <div class="lb"><span>水土保持措施因子 P</span><span class="unit">无量纲</span></div>
+          <input type="number" step="any" id="r6" placeholder="如 0.60">
+        </div>
+      </div>
+      <button class="btn" onclick="calcRusle()">计算</button>
+      <button class="btn btn-clear" onclick="clearRusle()">清空</button>
+      <div class="result" id="res1"></div>
+      <div class="note">
+        说明：R 取当地多年平均降雨侵蚀力，K 按土壤类型查表，L、S 依坡长坡度计算，C、P 按地表覆盖与措施取值。
+        侵蚀强度分级按 SL 190 水力侵蚀强度标准判定（单位 t/(hm²·a)）。
+      </div>
+    </div>
+  </div>
+
+  <!-- 工具二：六项防治目标 -->
+  <div class="panel" id="p2">
+    <div class="card">
+      <h2>六项防治目标达标判定</h2>
+      <div class="desc">按建设类项目一级标准进行达标判定，可直接用于方案报告书编写。</div>
+      <div class="grid">
+        <div>
+          <div class="lb"><span>扰动地表面积</span><span class="unit">hm²</span></div>
+          <input type="number" step="any" id="t1a" placeholder="如 120">
+        </div>
+        <div>
+          <div class="lb"><span>已完成整治面积</span><span class="unit">hm²</span></div>
+          <input type="number" step="any" id="t1b" placeholder="如 115">
+        </div>
+        <div>
+          <div class="lb"><span>水土流失总面积</span><span class="unit">hm²</span></div>
+          <input type="number" step="any" id="t2a" placeholder="如 80">
+        </div>
+        <div>
+          <div class="lb"><span>已完成治理面积</span><span class="unit">hm²</span></div>
+          <input type="number" step="any" id="t2b" placeholder="如 78">
+        </div>
+        <div>
+          <div class="lb"><span>弃渣总量</span><span class="unit">万 m³</span></div>
+          <input type="number" step="any" id="t3a" placeholder="如 45">
+        </div>
+        <div>
+          <div class="lb"><span>实际拦渣量</span><span class="unit">万 m³</span></div>
+          <input type="number" step="any" id="t3b" placeholder="如 44">
+        </div>
+        <div>
+          <div class="lb"><span>容许土壤流失量</span><span class="unit">t/(km²·a)</span></div>
+          <input type="number" step="any" id="t4a" placeholder="如 500">
+        </div>
+        <div>
+          <div class="lb"><span>治理后平均土壤流失量</span><span class="unit">t/(km²·a)</span></div>
+          <input type="number" step="any" id="t4b" placeholder="如 480">
+        </div>
+        <div>
+          <div class="lb"><span>可恢复林草植被面积</span><span class="unit">hm²</span></div>
+          <input type="number" step="any" id="t5a" placeholder="如 40">
+        </div>
+        <div>
+          <div class="lb"><span>已恢复林草面积</span><span class="unit">hm²</span></div>
+          <input type="number" step="any" id="t5b" placeholder="如 39">
+        </div>
+        <div>
+          <div class="lb"><span>项目建设区面积</span><span class="unit">hm²</span></div>
+          <input type="number" step="any" id="t6a" placeholder="如 150">
+        </div>
+        <div>
+          <div class="lb"><span>林草植被总面积</span><span class="unit">hm²</span></div>
+          <input type="number" step="any" id="t6b" placeholder="如 42">
+        </div>
+      </div>
+      <button class="btn" onclick="calcTargets()">计算</button>
+      <button class="btn btn-clear" onclick="clearTargets()">清空</button>
+      <div class="result" id="res2"></div>
+      <div class="note">
+        判定标准（建设类项目一级）：扰动土地整治率 95%、水土流失总治理度 95%、拦渣率 95%、
+        土壤流失控制比 0.8、林草植被恢复率 97%、林草覆盖率 25%。
+        执行不同标准等级时，请按项目实际采用的等级调整。
+      </div>
+    </div>
+  </div>
+
+  <!-- 工具三：弃渣场 -->
+  <div class="panel" id="p3">
+    <div class="card">
+      <h2>弃渣场占地与容量估算</h2>
+      <div class="desc">由弃渣量反算弃渣场所需占地面积，含实方与松方换算。</div>
+      <div class="formula">松方量 = 实方量 × 松方系数，占地面积 = 松方量 ÷ 平均堆高</div>
+      <div class="grid">
+        <div>
+          <div class="lb"><span>弃渣实方量</span><span class="unit">万 m³</span></div>
+          <input type="number" step="any" id="s1" placeholder="如 30">
+        </div>
+        <div>
+          <div class="lb"><span>松方系数</span><span class="unit">1.20 ~ 1.50</span></div>
+          <input type="number" step="any" id="s2" value="1.35">
+        </div>
+        <div>
+          <div class="lb"><span>平均堆置高度</span><span class="unit">m</span></div>
+          <input type="number" step="any" id="s3" placeholder="如 12">
+        </div>
+        <div>
+          <div class="lb"><span>边坡修正系数</span><span class="unit">1.00 ~ 1.30</span></div>
+          <input type="number" step="any" id="s4" value="1.15">
+        </div>
+      </div>
+      <button class="btn" onclick="calcSpoil()">计算</button>
+      <button class="btn btn-clear" onclick="clearSpoil()">清空</button>
+      <div class="result" id="res3"></div>
+      <div class="note">
+        说明：弃渣经开挖扰动后体积膨胀，需乘以松方系数折算为松方量；
+        渣体呈台形堆置，边坡放坡会额外占用土地，故再乘边坡修正系数。
+        结果为估算值，实际布设应结合地形与拦挡工程设计调整。
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  水土保持计算工具箱 · 结果仅供方案编制参考，正式成果请按现行规程复核
+</footer>
+
+<script>
+function switchTab(el){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active')});
+  el.classList.add('active');
+  document.getElementById(el.dataset.p).classList.add('active');
+}
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click',function(){switchTab(t)});
+});
+
+function fmt(n,d){return (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toFixed(d)}
+
+/* 工具一：RUSLE */
+function erosionGrade(a){
+  if(a<2) return {name:'微度',cls:'ok'};
+  if(a<25) return {name:'轻度',cls:'ok'};
+  if(a<50) return {name:'中度',cls:'mid'};
+  if(a<80) return {name:'强烈',cls:'mid'};
+  if(a<150) return {name:'极强烈',cls:'no'};
+  return {name:'剧烈',cls:'no'};
+}
+function calcRusle(){
+  var v=[1,2,3,4,5,6].map(function(i){return parseFloat(document.getElementById('r'+i).value)});
+  if(v.some(isNaN)){alert('请填写全部六个因子');return}
+  var A=v[0]*v[1]*v[2]*v[3]*v[4]*v[5];
+  var g=erosionGrade(A);
+  document.getElementById('res1').innerHTML=
+    '<div class="rrow"><span class="k">土壤流失量 A</span><span class="v big">'+fmt(A,2)+' t/(hm²·a)</span></div>'+
+    '<div class="rrow"><span class="k">折合</span><span class="v">'+fmt(A*100,0)+' t/(km²·a)</span></div>'+
+    '<div class="grade">水力侵蚀强度等级：<span class="badge '+g.cls+'">'+g.name+'</span></div>';
+  document.getElementById('res1').classList.add('show');
+}
+function clearRusle(){
+  [1,2,3,4,5,6].forEach(function(i){document.getElementById('r'+i).value=''});
+  document.getElementById('res1').classList.remove('show');
+}
+
+/* 工具二：六项防治目标 */
+function row(name,val,std,unit){
+  var ok = val>=std;
+  var badge = ok?'<span class="badge ok">达标</span>':'<span class="badge no">未达标</span>';
+  return '<div class="rrow"><span class="k">'+name+'（目标 '+std+unit+'）</span>'+
+         '<span class="v">'+fmt(val,2)+unit+' '+badge+'</span></div>';
+}
+function calcTargets(){
+  var ids=['t1a','t1b','t2a','t2b','t3a','t3b','t4a','t4b','t5a','t5b','t6a','t6b'];
+  var v={};var ok=true;
+  ids.forEach(function(i){
+    var x=parseFloat(document.getElementById(i).value);
+    if(isNaN(x)){ok=false}
+    v[i]=x;
+  });
+  if(!ok){alert('请填写全部十二项数据');return}
+  var r1=v.t1b/v.t1a*100;
+  var r2=v.t2b/v.t2a*100;
+  var r3=v.t3b/v.t3a*100;
+  var r4=v.t4a/v.t4b;
+  var r5=v.t5b/v.t5a*100;
+  var r6=v.t6b/v.t6a*100;
+  var html='';
+  html+=row('扰动土地整治率',r1,95,'%');
+  html+=row('水土流失总治理度',r2,95,'%');
+  html+=row('拦渣率',r3,95,'%');
+  html+=row('土壤流失控制比',r4,0.8,'');
+  html+=row('林草植被恢复率',r5,97,'%');
+  html+=row('林草覆盖率',r6,25,'%');
+  var pass=[r1>=95,r2>=95,r3>=95,r4>=0.8,r5>=97,r6>=25];
+  var n=pass.filter(Boolean).length;
+  var cls=n===6?'ok':(n>=4?'mid':'no');
+  html+='<div class="grade">六项指标达标 <b>'+n+'/6</b> <span class="badge '+cls+'">'+
+        (n===6?'全部达标':(n>=4?'部分达标':'未达标'))+'</span></div>';
+  document.getElementById('res2').innerHTML=html;
+  document.getElementById('res2').classList.add('show');
+}
+function clearTargets(){
+  ['t1a','t1b','t2a','t2b','t3a','t3b','t4a','t4b','t5a','t5b','t6a','t6b'].forEach(function(i){
+    document.getElementById(i).value='';
+  });
+  document.getElementById('res2').classList.remove('show');
+}
+
+/* 工具三：弃渣场 */
+function calcSpoil(){
+  var a=parseFloat(document.getElementById('s1').value);
+  var b=parseFloat(document.getElementById('s2').value);
+  var c=parseFloat(document.getElementById('s3').value);
+  var d=parseFloat(document.getElementById('s4').value);
+  if([a,b,c,d].some(isNaN)){alert('请填写全部参数');return}
+  var loose=a*b;
+  var area=loose/c*d;
+  document.getElementById('res3').innerHTML=
+    '<div class="rrow"><span class="k">弃渣松方量</span><span class="v">'+fmt(loose,2)+' 万 m³</span></div>'+
+    '<div class="rrow"><span class="k">所需占地面积</span><span class="v big">'+fmt(area,2)+' hm²</span></div>'+
+    '<div class="rrow"><span class="k">折合亩数</span><span class="v">'+fmt(area*15,1)+' 亩</span></div>';
+  document.getElementById('res3').classList.add('show');
+}
+function clearSpoil(){
+  ['s1','s3'].forEach(function(i){document.getElementById(i).value=''});
+  document.getElementById('s2').value='1.35';
+  document.getElementById('s4').value='1.15';
+  document.getElementById('res3').classList.remove('show');
+}
+</script>
+
+</body>
+</html>
